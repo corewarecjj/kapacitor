@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"path"
 	"strconv"
@@ -74,6 +75,10 @@ type Config struct {
 
 	// Optional credentials for authenticating with the server.
 	Credentials *Credentials
+
+	// Optional Transport https://golang.org/pkg/net/http/#RoundTripper
+	// If nil the default transport will be used
+	Transport http.RoundTripper
 }
 
 // AuthenticationMethod defines the type of authentication used.
@@ -119,6 +124,23 @@ func (c Credentials) Validate() error {
 	return nil
 }
 
+type localTransport struct {
+	h http.Handler
+}
+
+func (l *localTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	w := httptest.NewRecorder()
+	l.h.ServeHTTP(w, r)
+
+	return w.Result(), nil
+}
+
+func NewLocalTransport(h http.Handler) http.RoundTripper {
+	return &localTransport{
+		h: h,
+	}
+}
+
 // Basic HTTP client
 type Client struct {
 	url         *url.URL
@@ -149,21 +171,28 @@ func New(conf Config) (*Client, error) {
 		}
 	}
 
-	tr := &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: conf.InsecureSkipVerify,
-		},
-	}
-	if conf.TLSConfig != nil {
-		tr.TLSClientConfig = conf.TLSConfig
+	rt := conf.Transport
+	var tr *http.Transport
+
+	if rt == nil {
+		tr = &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: conf.InsecureSkipVerify,
+			},
+		}
+		if conf.TLSConfig != nil {
+			tr.TLSClientConfig = conf.TLSConfig
+		}
+
+		rt = tr
 	}
 	return &Client{
 		url:       u,
 		userAgent: conf.UserAgent,
 		httpClient: &http.Client{
 			Timeout:   conf.Timeout,
-			Transport: tr,
+			Transport: rt,
 		},
 		credentials: conf.Credentials,
 	}, nil

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -27,10 +28,14 @@ type Service struct {
 	logger *log.Logger
 }
 
-func NewService(c Config, l *log.Logger) (*Service, error) {
-	cli, err := client.New(client.Config{
+func NewService(c Config, h http.Handler, l *log.Logger) (*Service, error) {
+	cfg := client.Config{
 		URL: defaultURL,
-	})
+	}
+	if h != nil {
+		cfg.Transport = client.NewLocalTransport(h)
+	}
+	cli, err := client.New(cfg)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create client: %v", err)

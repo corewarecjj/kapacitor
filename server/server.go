@@ -356,7 +356,13 @@ func (s *Server) appendSMTPService() {
 func (s *Server) setLoadService() error {
 	c := s.config.Load
 	l := s.LogService.NewLogger("[load] ", log.LstdFlags)
-	srv, err := load.NewService(c, l)
+	if s.HTTPDService == nil {
+		return errors.New("httpd service must be set for load service")
+	}
+	if s.HTTPDService.Handler == nil {
+		return errors.New("httpd service handler must be set for load service")
+	}
+	srv, err := load.NewService(c, s.HTTPDService.Handler, l)
 	if err != nil {
 		return err
 	}
