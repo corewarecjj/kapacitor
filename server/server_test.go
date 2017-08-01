@@ -432,7 +432,6 @@ stream
 
 	// It is expected that error should be non nil
 	if err == nil {
-		// TODO: better message?
 		t.Fatal("expected task to fail to be created")
 	}
 }

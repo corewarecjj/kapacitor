@@ -633,7 +633,7 @@ func doDefine(args []string) error {
 	if *dfile != "" {
 		f, err := os.Open(*dfile)
 		if err != nil {
-			return errors.Wrapf(err, "faild to open file %s", *dfile)
+			return errors.Wrapf(err, "failed to open file %s", *dfile)
 		}
 		data, err := ioutil.ReadAll(f)
 		if err != nil {

@@ -302,8 +302,6 @@ func (s *Server) appendStorageService() {
 
 	s.StorageService = srv
 	s.AppendService("storage", srv)
-
-	return
 }
 
 func (s *Server) appendConfigOverrideService() {

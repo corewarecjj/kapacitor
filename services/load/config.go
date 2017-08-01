@@ -64,8 +64,6 @@ func (c Config) Validate() error {
 		return fmt.Errorf("directory %s must be contain subdirectory %s", c.Dir, handlerDir)
 	}
 
-	// TODO: we should probably check that we have the correct permissions to access the necessary files
-
 	return nil
 }
 
