@@ -14,6 +14,7 @@ import (
 
 	"github.com/influxdata/kapacitor/cmd/kapacitord/help"
 	"github.com/influxdata/kapacitor/cmd/kapacitord/run"
+	"github.com/influxdata/kapacitor/services/load"
 	"github.com/influxdata/wlog"
 )
 
@@ -104,14 +105,17 @@ func (m *Main) Run(args ...string) error {
 				}()
 				break Loop
 			case <-reloadSignal:
-				m.Logger.Println("I! SIGHUP received, Reloading tasks/templates/directory directory...")
+				m.Logger.Println("I! SIGHUP received, Reloading tasks/templates/handlers directory...")
 				if err := cmd.Server.LoadService.Load(); err != nil {
-					// TODO: should this be a sufficient condition to shutdown the server?
 					m.Logger.Println(fmt.Sprintf("E! Failed to reload tasks/templates/handlers: %s", err))
-					go func() {
-						cmd.Close()
-					}()
-					break Loop
+
+					if _, ok := err.(load.HardError); ok {
+						go func() {
+							cmd.Close()
+						}()
+						break Loop
+					}
+
 				}
 			}
 		}

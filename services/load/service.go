@@ -20,6 +20,14 @@ import (
 
 var defaultURL = "http://localhost:9092"
 
+type HardError struct {
+	err error
+}
+
+func (e HardError) Error() string {
+	return e.err.Error()
+}
+
 type Service struct {
 	mu     sync.Mutex
 	config Config
@@ -143,6 +151,14 @@ func (s *Service) handlerFiles() ([]string, error) {
 }
 
 func (s *Service) Load() error {
+	if err := s.load(); err != nil && s.config.Hard {
+		return HardError{err: err}
+	} else {
+		return err
+	}
+}
+
+func (s *Service) load() error {
 	if !s.config.Enabled {
 		return nil
 	}
