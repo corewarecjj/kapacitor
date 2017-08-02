@@ -768,13 +768,13 @@ func (ts *Service) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 
 	// Check for parity between tickscript and dbrp
 
-	pn, err := ast.NewProgramNodeFromTickscript(newTask.TICKscript)
+	pn, err := newProgramNodeFromTickscript(newTask.TICKscript)
 	if err != nil {
 		httpd.HttpError(w, err.Error(), true, http.StatusBadRequest)
 		return
 	}
 
-	switch tt := pn.TaskType(); tt {
+	switch tt := taskTypeFromProgram(pn); tt {
 	case client.StreamTask:
 		newTask.Type = StreamTask
 	case client.BatchTask:
@@ -784,7 +784,7 @@ func (ts *Service) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	dbrps := []DBRP{}
-	for _, dbrp := range pn.DBRPs() {
+	for _, dbrp := range dbrpsFromProgram(pn) {
 		dbrps = append(dbrps, DBRP{
 			Database:        dbrp.Database,
 			RetentionPolicy: dbrp.RetentionPolicy,
@@ -897,7 +897,7 @@ func (ts *Service) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 			updated.Type = BatchTask
 		}
 
-		oldPn, err := ast.NewProgramNodeFromTickscript(updated.TICKscript)
+		oldPn, err := newProgramNodeFromTickscript(updated.TICKscript)
 		if err != nil {
 			httpd.HttpError(w, err.Error(), true, http.StatusBadRequest)
 			return
@@ -907,32 +907,32 @@ func (ts *Service) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 		if task.TICKscript != "" {
 			updated.TICKscript = task.TICKscript
 
-			newPn, err := ast.NewProgramNodeFromTickscript(updated.TICKscript)
+			newPn, err := newProgramNodeFromTickscript(updated.TICKscript)
 			if err != nil {
 				httpd.HttpError(w, err.Error(), true, http.StatusBadRequest)
 				return
 			}
 
-			if len(oldPn.DBRPs()) > 0 && len(newPn.DBRPs()) == 0 && len(task.DBRPs) == 0 {
+			if len(dbrpsFromProgram(oldPn)) > 0 && len(dbrpsFromProgram(newPn)) == 0 && len(task.DBRPs) == 0 {
 				httpd.HttpError(w, "must specify dbrp", true, http.StatusBadRequest)
 				return
 			}
 		}
 	}
 
-	pn, err := ast.NewProgramNodeFromTickscript(updated.TICKscript)
+	pn, err := newProgramNodeFromTickscript(updated.TICKscript)
 	if err != nil {
 		httpd.HttpError(w, err.Error(), true, http.StatusBadRequest)
 		return
 	}
 
-	if dbrps := pn.DBRPs(); len(dbrps) > 0 && len(task.DBRPs) > 0 {
+	if dbrps := dbrpsFromProgram(pn); len(dbrps) > 0 && len(task.DBRPs) > 0 {
 		httpd.HttpError(w, "cannot specify dbrp in implicitly and explicitly", true, http.StatusBadRequest)
 		return
 	} else if len(dbrps) > 0 {
 		// make consistent
 		updated.DBRPs = []DBRP{}
-		for _, dbrp := range pn.DBRPs() {
+		for _, dbrp := range dbrpsFromProgram(pn) {
 			updated.DBRPs = append(updated.DBRPs, DBRP{
 				Database:        dbrp.Database,
 				RetentionPolicy: dbrp.RetentionPolicy,
@@ -981,7 +981,7 @@ func (ts *Service) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// set task type from tickscript
-	switch tt := pn.TaskType(); tt {
+	switch tt := taskTypeFromProgram(pn); tt {
 	case client.StreamTask:
 		updated.Type = StreamTask
 	case client.BatchTask:
@@ -1657,14 +1657,14 @@ func (ts *Service) handleCreateTemplate(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	pn, err := ast.NewProgramNodeFromTickscript(template.TICKscript)
+	pn, err := newProgramNodeFromTickscript(template.TICKscript)
 	if err != nil {
 		httpd.HttpError(w, err.Error(), true, http.StatusBadRequest)
 		return
 	}
 
 	// set task type from tickscript
-	switch tt := pn.TaskType(); tt {
+	switch tt := taskTypeFromProgram(pn); tt {
 	case client.StreamTask:
 		newTemplate.Type = StreamTask
 	case client.BatchTask:
@@ -1804,12 +1804,12 @@ func (ts *Service) handleUpdateTemplate(w http.ResponseWriter, r *http.Request) 
 // Rollsback all updated tasks if an error occurs.
 func (ts *Service) updateAllAssociatedTasks(old, new Template, taskIds []string) error {
 	var i int
-	oldPn, err := ast.NewProgramNodeFromTickscript(old.TICKscript)
+	oldPn, err := newProgramNodeFromTickscript(old.TICKscript)
 	if err != nil {
 		return fmt.Errorf("failed to parse old tickscript: %v", err)
 	}
 
-	newPn, err := ast.NewProgramNodeFromTickscript(new.TICKscript)
+	newPn, err := newProgramNodeFromTickscript(new.TICKscript)
 	if err != nil {
 		return fmt.Errorf("failed to parse new tickscript: %v", err)
 	}
@@ -1833,9 +1833,9 @@ func (ts *Service) updateAllAssociatedTasks(old, new Template, taskIds []string)
 			task.TemplateID = old.ID
 			task.TICKscript = old.TICKscript
 			task.Type = old.Type
-			if len(oldPn.DBRPs()) > 0 {
+			if len(dbrpsFromProgram(oldPn)) > 0 {
 				task.DBRPs = []DBRP{}
-				for _, dbrp := range oldPn.DBRPs() {
+				for _, dbrp := range dbrpsFromProgram(oldPn) {
 					task.DBRPs = append(task.DBRPs, DBRP{
 						Database:        dbrp.Database,
 						RetentionPolicy: dbrp.RetentionPolicy,
@@ -1876,10 +1876,10 @@ func (ts *Service) updateAllAssociatedTasks(old, new Template, taskIds []string)
 		task.TICKscript = new.TICKscript
 		task.Type = new.Type
 
-		if len(oldPn.DBRPs()) > 0 || len(newPn.DBRPs()) > 0 {
+		if len(dbrpsFromProgram(oldPn)) > 0 || len(dbrpsFromProgram(newPn)) > 0 {
 
 			task.DBRPs = []DBRP{}
-			for _, dbrp := range newPn.DBRPs() {
+			for _, dbrp := range dbrpsFromProgram(newPn) {
 				task.DBRPs = append(task.DBRPs, DBRP{
 					Database:        dbrp.Database,
 					RetentionPolicy: dbrp.RetentionPolicy,

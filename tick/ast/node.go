@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/influxdata/influxdb/influxql"
-	client "github.com/influxdata/kapacitor/client/v1"
 )
 
 // Indent string for formatted TICKscripts
@@ -1022,101 +1021,6 @@ func newProgram(p position) *ProgramNode {
 	return &ProgramNode{
 		position: p,
 	}
-}
-
-func NewProgramNodeFromTickscript(tickscript string) (*ProgramNode, error) {
-	p, err := Parse(tickscript)
-
-	if err != nil {
-		return nil, fmt.Errorf("invalid TICKscript: %v", err)
-	}
-
-	pn, ok := p.(*ProgramNode)
-	// This should never happen
-	if !ok {
-		return nil, errors.New("invalid TICKscript")
-	}
-
-	return pn, nil
-}
-
-// TODO: Not sure how I feel about client.TaskType importing from client
-func (n *ProgramNode) DBRPs() []client.DBRP {
-	dbrps := []client.DBRP{}
-	for _, nn := range n.Nodes {
-		switch nn.(type) {
-		case *DBRPNode:
-			dbrpn := nn.(*DBRPNode)
-			dbrpc := client.DBRP{
-				Database:        dbrpn.DB.Reference,
-				RetentionPolicy: dbrpn.RP.Reference,
-			}
-			dbrps = append(dbrps, dbrpc)
-		default:
-			continue
-		}
-	}
-
-	return dbrps
-}
-
-// TODO: Not sure how I feel about client.TaskType importing from client
-func (n *ProgramNode) TaskType() client.TaskType {
-	tts := []string{}
-	for _, nn := range n.Nodes {
-		switch nn.(type) {
-		case *DeclarationNode:
-			if cn, ok := nn.(*DeclarationNode).Right.(*ChainNode); ok {
-				var n = cn.Left
-			DeclLoop:
-				for {
-					switch n.(type) {
-					case *ChainNode:
-						n = n.(*ChainNode).Left
-					case *IdentifierNode:
-						if ident := n.(*IdentifierNode).Ident; ident == "batch" || ident == "stream" {
-							tts = append(tts, ident)
-						}
-						break DeclLoop
-					}
-				}
-			}
-		case *ChainNode:
-			var n = nn.(*ChainNode).Left
-		ChainLoop:
-			for {
-				switch n.(type) {
-				case *ChainNode:
-					n = n.(*ChainNode).Left
-				case *IdentifierNode:
-					if ident := n.(*IdentifierNode).Ident; ident == "batch" || ident == "stream" {
-						tts = append(tts, ident)
-					}
-					break ChainLoop
-				}
-			}
-		}
-	}
-
-	if len(tts) == 0 {
-		return client.InvalidTask
-	}
-
-	t := tts[0]
-	for _, tt := range tts[1:] {
-		if t != tt {
-			return client.InvalidTask
-		}
-	}
-
-	switch t {
-	case "batch":
-		return client.BatchTask
-	case "stream":
-		return client.StreamTask
-	}
-
-	return client.InvalidTask
 }
 
 func (n *ProgramNode) Add(node Node) {
