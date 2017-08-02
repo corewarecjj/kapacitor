@@ -2319,7 +2319,6 @@ func (d *Duration) UnmarshalText(data []byte) error {
 	return nil
 }
 
-// TODO: this is also used in kapacitor/main.go
 type DBRPs []DBRP
 
 func (d *DBRPs) String() string {
