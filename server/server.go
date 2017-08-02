@@ -204,7 +204,7 @@ func New(c *Config, buildInfo BuildInfo, logService logging.Interface) (*Server,
 		return nil, errors.Wrap(err, "influxdb service")
 	}
 
-	if err := s.setLoadService(); err != nil {
+	if err := s.appendLoadService(); err != nil {
 		return nil, errors.Wrap(err, "load service")
 	}
 
@@ -351,7 +351,7 @@ func (s *Server) appendSMTPService() {
 	s.AppendService("smtp", srv)
 }
 
-func (s *Server) setLoadService() error {
+func (s *Server) appendLoadService() error {
 	c := s.config.Load
 	l := s.LogService.NewLogger("[load] ", log.LstdFlags)
 	if s.HTTPDService == nil {
@@ -366,6 +366,7 @@ func (s *Server) setLoadService() error {
 	}
 
 	s.LoadService = srv
+	s.AppendService("load", srv)
 
 	return nil
 }

@@ -56,6 +56,14 @@ func NewService(c Config, h http.Handler, l *log.Logger) (*Service, error) {
 	}, nil
 }
 
+func (s *Service) Open() error {
+	return nil
+}
+
+func (s *Service) Close() error {
+	return nil
+}
+
 // TaskFiles gets a slice of all files with the .tick file extension
 // in the configured task directory.
 func (s *Service) taskFiles() (tickscripts []string, err error) {
