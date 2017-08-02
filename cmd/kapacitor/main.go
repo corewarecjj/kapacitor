@@ -659,43 +659,53 @@ func doDefine(args []string) error {
 	task, _ := cli.Task(l, nil)
 	var err error
 	if task.ID == "" {
-		o := client.CreateTaskOptions{
-			ID:         id,
-			TemplateID: *dtemplate,
-			Type:       ttype,
-			DBRPs:      ddbrp,
-			TICKscript: script,
-			Vars:       vars,
-			Status:     client.Disabled,
-		}
 		if *dfile != "" {
-			o, err = fileVars.CreateTaskOptions()
+			o, err := fileVars.CreateTaskOptions()
 			if err != nil {
 				return err
 			}
+			_, err = cli.CreateTask(o)
+		} else {
+			o := client.CreateTaskOptions{
+				ID:         id,
+				TemplateID: *dtemplate,
+				Type:       ttype,
+				DBRPs:      ddbrp,
+				TICKscript: script,
+				Vars:       vars,
+				Status:     client.Disabled,
+			}
+			_, err = cli.CreateTask(o)
 		}
-		_, err = cli.CreateTask(o)
 	} else {
-		o := client.UpdateTaskOptions{
-			TemplateID: *dtemplate,
-			Type:       ttype,
-			DBRPs:      ddbrp,
-			TICKscript: script,
-			Vars:       vars,
-		}
 		if *dfile != "" {
-			o, err = fileVars.UpdateTaskOptions()
+			o, err := fileVars.UpdateTaskOptions()
+			if err != nil {
+				return err
+			}
+			_, err = cli.UpdateTask(
+				l,
+				o,
+			)
+			if err != nil {
+				return err
+			}
+		} else {
+			o := client.UpdateTaskOptions{
+				TemplateID: *dtemplate,
+				Type:       ttype,
+				DBRPs:      ddbrp,
+				TICKscript: script,
+				Vars:       vars,
+			}
+			_, err = cli.UpdateTask(
+				l,
+				o,
+			)
 			if err != nil {
 				return err
 			}
 		}
-		_, err = cli.UpdateTask(
-			l,
-			o,
-		)
-	}
-	if err != nil {
-		return err
 	}
 
 	if !*dnoReload && task.Status == client.Enabled {

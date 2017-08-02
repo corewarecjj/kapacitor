@@ -89,33 +89,42 @@ func (m *Main) Run(args ...string) error {
 		}
 
 		signalCh := make(chan os.Signal, 1)
-		signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
-		reloadSignal := make(chan os.Signal, 1)
-		signal.Notify(reloadSignal, os.Interrupt, syscall.SIGHUP)
+		signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 		m.Logger.Println("I! Listening for signals")
 
 		// Block until one of the signals above is received
 	Loop:
 		for {
 			select {
-			case <-signalCh:
-				m.Logger.Println("I! Signal received, initializing clean shutdown...")
-				go func() {
-					cmd.Close()
-				}()
-				break Loop
-			case <-reloadSignal:
-				m.Logger.Println("I! SIGHUP received, Reloading tasks/templates/handlers directory...")
-				if err := cmd.Server.LoadService.Load(); err != nil {
-					m.Logger.Println(fmt.Sprintf("E! Failed to reload tasks/templates/handlers: %s", err))
 
-					if _, ok := err.(load.HardError); ok {
-						go func() {
-							cmd.Close()
-						}()
-						break Loop
+			case s := <-signalCh:
+				switch s.String() {
+				case syscall.SIGTERM.String():
+					m.Logger.Println("I! SIGTERM received, initializing clean shutdown...")
+					go func() {
+						cmd.Close()
+					}()
+					break Loop
+
+				case syscall.SIGHUP.String():
+					m.Logger.Println("I! SIGHUP received, Reloading tasks/templates/handlers directory...")
+					if err := cmd.Server.LoadService.Load(); err != nil {
+						m.Logger.Println(fmt.Sprintf("E! Failed to reload tasks/templates/handlers: %s", err))
+						if _, ok := err.(load.HardError); ok {
+							go func() {
+								cmd.Close()
+							}()
+							break Loop
+						}
 					}
 
+					// This should never happen
+				default:
+					m.Logger.Println("I! Signal received, initializing clean shutdown...")
+					go func() {
+						cmd.Close()
+					}()
+					break Loop
 				}
 			}
 		}
