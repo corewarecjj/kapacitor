@@ -200,7 +200,7 @@ func (s *Service) loadTasks() error {
 	for _, f := range files {
 		s.logger.Println("D! Loading task from file: ", f)
 		if err := s.loadTask(f); err != nil {
-			return err
+			return fmt.Errorf("failed to load file %s: %s", f, err.Error())
 		}
 	}
 
@@ -267,14 +267,14 @@ func (s *Service) loadTemplates() error {
 	for _, f := range files {
 		s.logger.Println("D! Loading template from file: ", f)
 		if err := s.loadTemplate(f); err != nil {
-			return err
+			return fmt.Errorf("failed to load file %s: %s", f, err.Error())
 		}
 	}
 
 	for _, v := range vars {
 		s.logger.Println("D! Loading task vars from file: ", v)
 		if err := s.loadVars(v); err != nil {
-			return err
+			return fmt.Errorf("failed to load file %s: %s", v, err.Error())
 		}
 	}
 	return nil
@@ -395,7 +395,7 @@ func (s *Service) loadHandlers() error {
 	for _, f := range files {
 		s.logger.Println("D! Loading handler from file: ", f)
 		if err := s.loadHandler(f); err != nil {
-			return err
+			return fmt.Errorf("failed to load file %s: %s", f, err.Error())
 		}
 	}
 	return nil
