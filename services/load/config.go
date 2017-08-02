@@ -2,8 +2,6 @@ package load
 
 import (
 	"errors"
-	"fmt"
-	"io/ioutil"
 	"path/filepath"
 )
 
@@ -36,32 +34,6 @@ func (c Config) Validate() error {
 	// Verify that the path is absolute
 	if !filepath.IsAbs(c.Dir) {
 		return errors.New("dir must be an absolute path")
-	}
-
-	// Verify that correct subdirectories exist
-	files, err := ioutil.ReadDir(c.Dir)
-	if err != nil {
-		return err
-	}
-
-	dirs := map[string]bool{}
-
-	for _, file := range files {
-		if file.IsDir() {
-			dirs[file.Name()] = true
-		}
-	}
-
-	if !dirs[taskDir] {
-		return fmt.Errorf("directory %s must be contain subdirectory %s", c.Dir, taskDir)
-	}
-
-	if !dirs[templateDir] {
-		return fmt.Errorf("directory %s must be contain subdirectory %s", c.Dir, templateDir)
-	}
-
-	if !dirs[handlerDir] {
-		return fmt.Errorf("directory %s must be contain subdirectory %s", c.Dir, handlerDir)
 	}
 
 	return nil

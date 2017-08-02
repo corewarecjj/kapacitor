@@ -164,19 +164,19 @@ func (s *Service) load() error {
 	}
 	s.logger.Println("D! Loading tasks")
 	err := s.loadTasks()
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
 	s.logger.Println("D! Loading templates")
 	err = s.loadTemplates()
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
 	s.logger.Println("D! Loading handlers")
 	err = s.loadHandlers()
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
